@@ -1,8 +1,33 @@
-- name: Installer Docker
+---
+- name: Installer Docker (Debian/Ubuntu)
   ansible.builtin.shell:
     cmd: curl -fsSL https://get.docker.com | sh
   args:
     creates: /usr/bin/docker
+  when: ansible_os_family == "Debian"
+
+- name: Ajouter le repo Docker (RedHat/Rocky)
+  ansible.builtin.shell:
+    cmd: dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+  args:
+    creates: /etc/yum.repos.d/docker-ce.repo
+  when: ansible_os_family == "RedHat"
+
+- name: Installer Docker (RedHat/Rocky)
+  ansible.builtin.dnf:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: Démarrer Docker en arrière-plan
+  ansible.builtin.shell:
+    cmd: dockerd &
+  args:
+    creates: /var/run/docker.pid
+  ignore_errors: true
 
 - name: Installer kubectl
   ansible.builtin.shell:
