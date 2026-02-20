@@ -1,0 +1,4 @@
+cluster_name: k3d-lab
+node_port: 30080
+welcome_message: "Bienvenue dans le k3d LAB"
+manifest_dest: /root/nginx.yaml

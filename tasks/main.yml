@@ -1,0 +1,45 @@
+- name: Installer Docker
+  ansible.builtin.shell:
+    cmd: curl -fsSL https://get.docker.com | sh
+  args:
+    creates: /usr/bin/docker
+
+- name: Installer kubectl
+  ansible.builtin.shell:
+    cmd: |
+      curl -LO "https://dl.k8s.io/release/$(curl -Ls https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+      chmod +x kubectl
+      mv kubectl /usr/local/bin/kubectl
+  args:
+    creates: /usr/local/bin/kubectl
+
+- name: Installer k3d
+  ansible.builtin.shell:
+    cmd: curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
+  args:
+    creates: /usr/local/bin/k3d
+
+- name: Créer le cluster k3d
+  ansible.builtin.shell:
+    cmd: k3d cluster create {{ cluster_name }} --agents 1
+  register: cluster_result
+  failed_when: cluster_result.rc != 0 and 'already exists' not in cluster_result.stderr
+
+- name: Générer le manifest nginx depuis le template
+  ansible.builtin.template:
+    src: nginx.yaml.j2
+    dest: "{{ manifest_dest }}"
+    mode: '0644'
+
+- name: Appliquer le manifest
+  ansible.builtin.shell:
+    cmd: kubectl apply -f {{ manifest_dest }}
+
+- name: Récupérer l'URL d'accès
+  ansible.builtin.shell:
+    cmd: echo "http://$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[0].address}'):{{ node_port }}"
+  register: url_result
+
+- name: Afficher l'URL d'accès
+  ansible.builtin.debug:
+    msg: "{{ url_result.stdout }}"
